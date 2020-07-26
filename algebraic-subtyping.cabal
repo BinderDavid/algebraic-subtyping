@@ -24,6 +24,7 @@ library
     , Inference
     , Pretty
     , Examples
+    , Coalesce
   other-modules:
       Paths_algebraic_subtyping
   hs-source-dirs:
@@ -33,6 +34,7 @@ library
     , containers
     , mtl
   default-language: Haskell2010
+  ghc-options: -Wall
 
 executable algebraic-subtyping-exe
   main-is: Main.hs
