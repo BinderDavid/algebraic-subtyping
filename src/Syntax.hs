@@ -20,57 +20,57 @@ data Term
   | TmApp Term Term
   | TmRcd [(Label, Term)]
   | TmSel Term Label
---  | TmLet IsRec VarName Term Term
 
 ------------------------------------------------------------------------------------------
 -- (Mutable) Simple types
+-- These should be removed since we want to switch to "french style" HM
 ------------------------------------------------------------------------------------------
 
-data VariableState = MkVariableState
-  { lowerBounds :: [SimpleType]
-  , upperBounds :: [SimpleType]
+data VariableStateMut = MkVariableStateMut
+  { lowerBoundsM :: [SimpleTypeMut]
+  , upperBoundsM :: [SimpleTypeMut]
   }
 
-data SimpleType
-  = TyVar (IORef VariableState)
-  | TyPrim PrimName
-  | TyFun SimpleType SimpleType
-  | TyRcd [(Label, SimpleType)]
+data SimpleTypeMut
+  = TyVarM (IORef VariableStateMut)
+  | TyPrimM PrimName
+  | TyFunM SimpleTypeMut SimpleTypeMut
+  | TyRcdM [(Label, SimpleTypeMut)]
   deriving (Eq)
 
 ------------------------------------------------------------------------------------------
 -- (Immutable) Simple types
 ------------------------------------------------------------------------------------------
 
-data VariableStateFrozen = MkVariableStateFrozen
-  { lowerBoundsF :: [SimpleTypeFrozen]
-  , upperBoundsF :: [SimpleTypeFrozen]
+data VariableState = MkVariableState
+  { lowerBounds :: [SimpleType]
+  , upperBounds :: [SimpleType]
   }
   deriving (Eq, Ord)
 
-data SimpleTypeFrozen
-  = TyVarF VariableStateFrozen
-  | TyPrimF PrimName
-  | TyFunF SimpleTypeFrozen SimpleTypeFrozen
-  | TyRcdF [(Label, SimpleTypeFrozen)]
+data SimpleType
+  = TyVar VariableState
+  | TyPrim PrimName
+  | TyFun SimpleType SimpleType
+  | TyRcd [(Label, SimpleType)]
   deriving (Eq, Ord)
 
-freeze :: SimpleType -> IO (SimpleTypeFrozen)
-freeze (TyVar ref) = do
+freeze :: SimpleTypeMut -> IO (SimpleType)
+freeze (TyVarM ref) = do
   vs <- readIORef ref
-  lb <- forM (lowerBounds vs) freeze
-  ub <- forM (upperBounds vs) freeze
-  return (TyVarF (MkVariableStateFrozen lb ub))
-freeze (TyPrim n) = return (TyPrimF n)
-freeze (TyFun t1 t2) = do
+  lb <- forM (lowerBoundsM vs) freeze
+  ub <- forM (upperBoundsM vs) freeze
+  return (TyVar (MkVariableState lb ub))
+freeze (TyPrimM n) = return (TyPrim n)
+freeze (TyFunM t1 t2) = do
   t1f <- freeze t1
   t2f <- freeze t2
-  return (TyFunF t1f t2f)
-freeze (TyRcd fs) = do
+  return (TyFun t1f t2f)
+freeze (TyRcdM fs) = do
   fsf <- forM fs (\(lbl, t) -> do
                      tf <- freeze t
                      return (lbl,tf))
-  return (TyRcdF fsf)
+  return (TyRcd fsf)
 
 ------------------------------------------------------------------------------------------
 -- Target Types
@@ -93,6 +93,6 @@ switchPol :: Polarity -> Polarity
 switchPol Pos = Neg
 switchPol Neg = Pos
 
-type PolarVariable = (VariableStateFrozen, Polarity)
+type PolarVariable = (VariableState, Polarity)
 
 

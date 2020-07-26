@@ -7,6 +7,10 @@ import Data.List (intersperse)
 
 import Syntax
 
+------------------------------------------------------------------------------------------
+-- Print Terms
+------------------------------------------------------------------------------------------
+
 printTerm :: Term -> String
 printTerm (TmLit i) = show i
 printTerm (TmVar v) = v
@@ -17,24 +21,27 @@ printTerm (TmRcd fs) = "{" <> concat (printFoo <$> fs) <> "}"
     printFoo (lbl, tm) = lbl <> " = " <> printTerm tm <> ","
 printTerm (TmSel tm lbl) = printTerm tm <> "." <> lbl
 
+------------------------------------------------------------------------------------------
+-- Print mutable simple types
+------------------------------------------------------------------------------------------
 
-printSimpleType :: SimpleType -> IO String
-printSimpleType (TyVar ref) = do
+printSimpleTypeMut :: SimpleTypeMut -> IO String
+printSimpleTypeMut (TyVarM ref) = do
   vs <- readIORef ref
   printVariableState vs
-printSimpleType (TyPrim n) = return n
-printSimpleType (TyFun t1 t2) = do
-  t1p <- printSimpleType t1
-  t2p <- printSimpleType t2
+printSimpleTypeMut (TyPrimM n) = return n
+printSimpleTypeMut (TyFunM t1 t2) = do
+  t1p <- printSimpleTypeMut t1
+  t2p <- printSimpleTypeMut t2
   return ("(" <> t1p <> " -> " <> t2p <> ")")
-printSimpleType (TyRcd fs) = do
+printSimpleTypeMut (TyRcdM fs) = do
   fsp <- forM fs (\(lbl, ty) -> do
-                     typ <- printSimpleType ty
+                     typ <- printSimpleTypeMut ty
                      return (lbl <> " : " <> typ <> ", "))
   return ("{" <> concat fsp <> "}")
 
-printVariableState :: VariableState -> IO String
-printVariableState MkVariableState { lowerBounds, upperBounds } = do
-  lbp <- forM lowerBounds printSimpleType
-  ubp <- forM upperBounds printSimpleType
+printVariableState :: VariableStateMut -> IO String
+printVariableState MkVariableStateMut { lowerBoundsM, upperBoundsM } = do
+  lbp <- forM lowerBoundsM printSimpleTypeMut
+  ubp <- forM upperBoundsM printSimpleTypeMut
   return ("< lower: " <> concat (intersperse "," lbp) <> " upper: " <> concat (intersperse "," ubp) <> " >")

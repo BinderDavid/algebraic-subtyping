@@ -11,21 +11,21 @@ import Syntax
 -- Type Coalescing
 ------------------------------------------------------------------------------------------
 
-coalesceType :: SimpleTypeFrozen -> State (Map PolarVariable ()) TargetType
+coalesceType :: SimpleType -> State (Map PolarVariable ()) TargetType
 coalesceType ty = go ty Pos S.empty
 
-go :: SimpleTypeFrozen -> Polarity -> Set PolarVariable -> State (Map PolarVariable ()) TargetType
-go (TyPrimF n) _ _ = return (TTyPrim n)
-go (TyFunF t1 t2) pol inProcess = do
+go :: SimpleType -> Polarity -> Set PolarVariable -> State (Map PolarVariable ()) TargetType
+go (TyPrim n) _ _ = return (TTyPrim n)
+go (TyFun t1 t2) pol inProcess = do
   tt1 <- go t1 (switchPol pol) inProcess
   tt2 <- go t2 pol inProcess
   return (TTyFun tt1 tt2)
-go (TyRcdF fs) pol inProcess = do
+go (TyRcd fs) pol inProcess = do
   fs' <- forM fs (\(lbl, ty) -> do
                      tty <- go ty pol inProcess
                      return (lbl,tty))
   return (TTyRcd fs')
-go (TyVarF vs) pol inProcess = do
+go (TyVar vs) pol inProcess = do
   let vs_pol = (vs, pol)
   case S.member vs_pol inProcess of
     True -> do
@@ -33,8 +33,8 @@ go (TyVarF vs) pol inProcess = do
       undefined
     False -> do
       let bounds = case pol of
-            Pos -> lowerBoundsF vs
-            Neg -> upperBoundsF vs
+            Pos -> lowerBounds vs
+            Neg -> upperBounds vs
       boundTypes <- undefined
       let mrg = case pol of
             Pos -> TTyUnion
