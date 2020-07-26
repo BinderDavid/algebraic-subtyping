@@ -5,6 +5,7 @@ import Data.IORef
 
 type PrimName = String
 type VarName = String
+type TyVarName = String
 type Label = String
 
 ------------------------------------------------------------------------------------------
@@ -22,25 +23,15 @@ data Term
   | TmSel Term Label
 
 ------------------------------------------------------------------------------------------
--- (Mutable) Simple types
--- These should be removed since we want to switch to "french style" HM
+-- Simple unresolved types
 ------------------------------------------------------------------------------------------
 
-data VariableStateMut = MkVariableStateMut
-  { lowerBoundsM :: [SimpleTypeMut]
-  , upperBoundsM :: [SimpleTypeMut]
-  }
-
-data SimpleTypeMut
-  = TyVarM (IORef VariableStateMut)
-  | TyPrimM PrimName
-  | TyFunM SimpleTypeMut SimpleTypeMut
-  | TyRcdM [(Label, SimpleTypeMut)]
-  deriving (Eq)
-
-------------------------------------------------------------------------------------------
--- (Immutable) Simple types
-------------------------------------------------------------------------------------------
+data SimpleType
+  = TyVar TyVarName
+  | TyPrim PrimName
+  | TyFun SimpleType SimpleType
+  | TyRcd [(Label, SimpleType)]
+  deriving (Eq, Ord)
 
 data VariableState = MkVariableState
   { lowerBounds :: [SimpleType]
@@ -48,29 +39,22 @@ data VariableState = MkVariableState
   }
   deriving (Eq, Ord)
 
-data SimpleType
-  = TyVar VariableState
-  | TyPrim PrimName
-  | TyFun SimpleType SimpleType
-  | TyRcd [(Label, SimpleType)]
+------------------------------------------------------------------------------------------
+-- Simple resolved types
+------------------------------------------------------------------------------------------
+
+data SimpleTypeR
+  = TyVarR VariableStateR
+  | TyPrimR PrimName
+  | TyFunR SimpleTypeR SimpleTypeR
+  | TyRcdR [(Label, SimpleTypeR)]
   deriving (Eq, Ord)
 
-freeze :: SimpleTypeMut -> IO (SimpleType)
-freeze (TyVarM ref) = do
-  vs <- readIORef ref
-  lb <- forM (lowerBoundsM vs) freeze
-  ub <- forM (upperBoundsM vs) freeze
-  return (TyVar (MkVariableState lb ub))
-freeze (TyPrimM n) = return (TyPrim n)
-freeze (TyFunM t1 t2) = do
-  t1f <- freeze t1
-  t2f <- freeze t2
-  return (TyFun t1f t2f)
-freeze (TyRcdM fs) = do
-  fsf <- forM fs (\(lbl, t) -> do
-                     tf <- freeze t
-                     return (lbl,tf))
-  return (TyRcd fsf)
+data VariableStateR = MkVariableStateR
+  { lowerBoundsR :: [SimpleTypeR]
+  , upperBoundsR :: [SimpleTypeR]
+  }
+  deriving (Eq, Ord)
 
 ------------------------------------------------------------------------------------------
 -- Target Types
