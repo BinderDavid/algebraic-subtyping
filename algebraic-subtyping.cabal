@@ -21,7 +21,8 @@ source-repository head
 library
   exposed-modules:
       Syntax
-      , Inference
+    , Inference
+    , Pretty
   other-modules:
       Paths_algebraic_subtyping
   hs-source-dirs:
