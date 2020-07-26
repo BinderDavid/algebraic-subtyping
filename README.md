@@ -1,5 +1,7 @@
 # Algebraic Subtyping
 
+![CI](https://github.com/BinderDavid/algebraic-subtyping/workflows/CI/badge.svg?branch=master)
+
 ### Resources
 
 
