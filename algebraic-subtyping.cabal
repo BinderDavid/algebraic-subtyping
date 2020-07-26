@@ -1,0 +1,55 @@
+cabal-version: 1.12
+name:           algebraic-subtyping
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/BinderDavid/algebraic-subtyping#readme>
+homepage:       https://github.com/BinderDavid/algebraic-subtyping#readme
+bug-reports:    https://github.com/BinderDavid/algebraic-subtyping/issues
+author:         David Binder
+maintainer:     example@example.com
+copyright:      2020 David Binder
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    ChangeLog.md
+
+source-repository head
+  type: git
+  location: https://github.com/BinderDavid/algebraic-subtyping.git
+
+library
+  exposed-modules:
+      Syntax
+  other-modules:
+      Paths_algebraic_subtyping
+  hs-source-dirs:
+      src
+  build-depends:
+      base >=4.7 && <5
+  default-language: Haskell2010
+
+executable algebraic-subtyping-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_algebraic_subtyping
+  hs-source-dirs:
+      app
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      algebraic-subtyping
+    , base >=4.7 && <5
+  default-language: Haskell2010
+
+test-suite algebraic-subtyping-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_algebraic_subtyping
+  hs-source-dirs:
+      test
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      algebraic-subtyping
+    , base >=4.7 && <5
+  default-language: Haskell2010
