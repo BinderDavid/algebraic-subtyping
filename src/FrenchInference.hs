@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 module FrenchInference where
 
 import Control.Monad.State
@@ -23,7 +24,7 @@ data SimpleType
   deriving (Eq, Ord)
 
 
-data Constraint = SubType SimpleType SimpleType
+data Constraint = SubType SimpleType SimpleType deriving (Eq)
 
 ------------------------------------------------------------------------------------------
 -- Constraint generation
@@ -78,12 +79,49 @@ data VariableState = MkVariableState
   }
   deriving (Eq, Ord)
 
+solveConstraint :: Constraint -> (Map TyVarName VariableState -> Map TyVarName VariableState)
+solveConstraint (SubType (TyPrim n) (TyPrim n')) | n == n' = id
+solveConstraint (SubType (TyFun l0 r0) (TyFun l1 r1)) = solveConstraint (SubType l1 l0) . solveConstraint (SubType r0 r1)
+solveConstraint (SubType (TyRcd fs0) (TyRcd fs1)) = undefined
+solveConstraint (SubType (TyVar v) ty) = \m ->
+  case M.lookup v m of
+    Nothing -> M.insert v (MkVariableState [] [ty]) m
+    Just (MkVariableState { lowerBounds, upperBounds }) ->
+      let
+        newConstraints = (\lb -> SubType lb ty) <$> lowerBounds
+        updatedMap = M.insert v (MkVariableState lowerBounds (ty : upperBounds)) m
+      in
+        foldr (.) id (solveConstraint <$> newConstraints) $ updatedMap
+solveConstraint (SubType ty (TyVar v)) = \m ->
+  case M.lookup v m of
+    Nothing -> M.insert v (MkVariableState [ty] []) m
+    Just (MkVariableState { lowerBounds, upperBounds }) ->
+      let
+        newConstraints = (\ub -> SubType ty ub) <$> upperBounds
+        updatedMap = M.insert v (MkVariableState (ty : lowerBounds) upperBounds) m
+      in
+        foldr (.) id (solveConstraint <$> newConstraints) $ updatedMap
+solveConstraint (SubType _ty1 _ty2) = error "Cannot constrain types"
+
+
+data ConstraintSolverState = ConstraintSolverState
+  { css_constraints :: [Constraint]
+  , css_partialResult :: Map TyVarName VariableState
+  , css_cache :: [Constraint]
+  }
+
+stepConstraintSolver :: ConstraintSolverState -> Maybe ConstraintSolverState
+stepConstraintSolver ConstraintSolverState { css_constraints = [] } = Nothing
+stepConstraintSolver ConstraintSolverState { css_constraints = constraint : constraints, css_partialResult, css_cache } =
+  if constraint `elem` css_cache
+  then Just ConstraintSolverState { css_constraints = constraints, css_partialResult = css_partialResult, css_cache = css_cache }
+  else Just ConstraintSolverState { css_constraints = constraints
+                                  , css_partialResult = solveConstraint constraint css_partialResult
+                                  , css_cache = constraint : css_cache
+                                  }
+
 solveConstraints :: [Constraint] -> Map TyVarName VariableState
-solveConstraints [] = M.empty
-solveConstraints (SubType (TyPrim n) (TyPrim n') : constraints) | n == n' = solveConstraints constraints
-solveConstraints (SubType (TyFun l0 r0) (TyFun l1 r1) : constraints) = solveConstraints (SubType l1 l0 : SubType l0 r1 : constraints)
-solveConstraints (SubType (TyRcd fs0) (TyRcd fs1) : constraints) = undefined
-solveConstraints (SubType _ty1 _ty2 : _) = error "Cannot constrain types"
+solveConstraints constraints = foldr solveConstraint M.empty constraints
 
 ------------------------------------------------------------------------------------------
 -- Zonking
