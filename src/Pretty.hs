@@ -2,8 +2,10 @@
 module Pretty where
 
 import Data.List (intersperse)
+import qualified Data.Map as M
 
 import Syntax
+import Inference
 
 ------------------------------------------------------------------------------------------
 -- Print Terms
@@ -45,3 +47,55 @@ printVariableState MkVariableState { lowerBounds, upperBounds } =
     ubp = map printSimpleType upperBounds
   in
     "< lower: " <> concat (intersperse "," lbp) <> " upper: " <> concat (intersperse "," ubp) <> " >"
+
+------------------------------------------------------------------------------------------
+-- Print resolved types
+------------------------------------------------------------------------------------------
+
+printSimpleTypeR :: SimpleTypeR -> String
+printSimpleTypeR (TyVarR vs) = printVariableStateR vs
+printSimpleTypeR (TyPrimR n) = n
+printSimpleTypeR (TyFunR t1 t2) =
+  let
+    t1p = printSimpleTypeR t1
+    t2p = printSimpleTypeR t2
+  in
+    "(" <> t1p <> " -> " <> t2p <> ")"
+printSimpleTypeR (TyRcdR fs) =
+  let
+    foo (lbl, ty) = lbl <> " : " <> printSimpleTypeR ty <> ", "
+  in
+    "{" <> concat (map foo fs) <> "}"
+
+printVariableStateR :: VariableStateR -> String
+printVariableStateR MkVariableStateR { lowerBoundsR, upperBoundsR } =
+  let
+    lbp = map printSimpleTypeR lowerBoundsR
+    ubp = map printSimpleTypeR upperBoundsR
+  in
+    "< lower: " <> concat (intersperse "," lbp) <> " upper: " <> concat (intersperse "," ubp) <> " >"
+
+------------------------------------------------------------------------------------------
+-- Print resolved types
+------------------------------------------------------------------------------------------
+
+printConstraint :: Constraint -> String
+printConstraint (SubType ty1 ty2) = printSimpleType ty1 <> " <: " <> printSimpleType ty2
+
+printCSS :: ConstraintSolverState -> String
+printCSS ConstraintSolverState { css_constraints, css_partialResult, css_cache } =
+  unlines [ "---------------------------------------------------------------------------------------"
+          , "Constraints:"
+          , constraints
+          , "Partial result:"
+          , partialResult
+          , "Cache:"
+          , cache
+          , "---------------------------------------------------------------------------------------"
+          ]
+  where
+    constraints = concat (intersperse "\n" (printConstraint <$> css_constraints))
+    printPartialResult (var, vs) = var <> " => " <> printVariableState vs
+    partialResult = concat (intersperse "\n" (printPartialResult <$> (M.assocs css_partialResult)))
+    cache = concat (intersperse "\n" (printConstraint <$> css_cache))
+
