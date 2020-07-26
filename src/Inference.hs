@@ -2,7 +2,10 @@
 module Inference where
 
 import Control.Monad.State
-import Data.Map hiding (lookup)
+import Data.Map (Map)
+import qualified Data.Map as M
+import Data.Set (Set)
+import qualified Data.Set as S
 import Data.Maybe (fromJust)
 import Data.IORef
 
@@ -20,7 +23,7 @@ type InferenceM a = StateT ([(SimpleType, SimpleType)], Ctx) IO a
 lookupVar :: VarName -> InferenceM SimpleType
 lookupVar x = do
   ctx <- gets snd
-  return (ctx ! x)
+  return (ctx M.! x)
 
 freshTyVar :: InferenceM SimpleType
 freshTyVar = do
@@ -35,7 +38,7 @@ typeTerm (TmRcd xs) = do
   return (TyRcd inferredTypes)
 typeTerm (TmLam var tm) = do
   tyvar <- freshTyVar
-  modify (\(cache, ctx) -> (cache, insert var tyvar ctx))
+  modify (\(cache, ctx) -> (cache, M.insert var tyvar ctx))
   returnType <- typeTerm tm
   return (TyFun tyvar returnType)
 typeTerm (TmApp tm1 tm2) = do
@@ -82,3 +85,38 @@ constrain (lhs, TyVar rhs) = do
   upperBs <- liftIO $ upperBounds <$> readIORef rhs
   forM_ upperBs (\ub -> constrainMemoized (lhs, ub))
 constrain (_,_)= error "Cannot constrain"
+
+------------------------------------------------------------------------------------------
+-- Type Coalescing
+------------------------------------------------------------------------------------------
+
+coalesceType :: SimpleTypeFrozen -> State (Map PolarVariable ()) TargetType
+coalesceType ty = go ty Pos S.empty
+
+go :: SimpleTypeFrozen -> Polarity -> Set PolarVariable -> State (Map PolarVariable ()) TargetType
+go (TyPrimF n) _ _ = return (TTyPrim n)
+go (TyFunF t1 t2) pol inProcess = do
+  tt1 <- go t1 (switchPol pol) inProcess
+  tt2 <- go t2 pol inProcess
+  return (TTyFun tt1 tt2)
+go (TyRcdF fs) pol inProcess = do
+  fs' <- forM fs (\(lbl, ty) -> do
+                     tty <- go ty pol inProcess
+                     return (lbl,tty))
+  return (TTyRcd fs')
+go (TyVarF vs) pol inProcess = do
+  let vs_pol = (vs, pol)
+  case S.member vs_pol inProcess of
+    True -> do
+      recursive <- get
+      undefined
+    False -> do
+      let bounds = case pol of
+            Pos -> lowerBoundsF vs
+            Neg -> upperBoundsF vs
+      boundTypes <- undefined
+      let mrg = case pol of
+            Pos -> TTyUnion
+            Neg -> TTyInter
+      let res = undefined
+      undefined
