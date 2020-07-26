@@ -22,6 +22,7 @@ library
   exposed-modules:
       Syntax
     , Inference
+    , FrenchInference
     , Pretty
     , Examples
     , Coalesce
