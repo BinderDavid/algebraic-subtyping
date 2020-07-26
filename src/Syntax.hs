@@ -1,5 +1,6 @@
 module Syntax where
 
+import Data.IORef
 
 type PrimName = String
 type VarName = String
@@ -14,7 +15,7 @@ data Term
   | TmApp Term Term
   | TmRcd [(Label, Term)]
   | TmSel Term Label
-  | TmLet IsRec VarName Term Term
+--  | TmLet IsRec VarName Term Term
 
 
 data VariableState = MkVariableState
@@ -23,7 +24,9 @@ data VariableState = MkVariableState
   }
 
 data SimpleType
-  = TyVar VariableState
+  = TyVar (IORef VariableState)
   | TyPrim PrimName
   | TyFun SimpleType SimpleType
   | TyRcd [(Label, SimpleType)]
+  deriving (Eq)
+
