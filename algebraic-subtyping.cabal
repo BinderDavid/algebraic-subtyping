@@ -23,6 +23,7 @@ library
       Syntax
     , Inference
     , Pretty
+    , Examples
   other-modules:
       Paths_algebraic_subtyping
   hs-source-dirs:

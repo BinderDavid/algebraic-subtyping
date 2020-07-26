@@ -20,6 +20,9 @@ type Ctx = Map VarName SimpleType
 
 type InferenceM a = StateT ([(SimpleType, SimpleType)], Ctx) IO a
 
+runInferenceM :: InferenceM a -> IO a
+runInferenceM m = evalStateT m ([], M.empty)
+
 lookupVar :: VarName -> InferenceM SimpleType
 lookupVar x = do
   ctx <- gets snd
@@ -52,6 +55,7 @@ typeTerm (TmSel tm lbl) = do
   ty <- typeTerm tm
   constrainMemoized (ty, TyRcd [(lbl, resType)])
   return resType
+
 
 ------------------------------------------------------------------------------------------
 -- Type Constraining
