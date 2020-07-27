@@ -19,17 +19,17 @@ data Constraint = SubType SimpleType SimpleType deriving (Eq)
 -- During constraint generation we need:
 -- - A Reader for the local variable context
 -- - A Writer for the generated constraints
--- - A State for generating fresh type variables
+-- - A State for generating fresh unification variables
 type GenerateM = ReaderT (Map VarName SimpleType) (WriterT [Constraint] (State Int))
 
 runGenerateM :: GenerateM a -> (a, [Constraint])
 runGenerateM m = evalState (runWriterT (runReaderT m M.empty)) 0
 
-freshTyVar :: GenerateM TyVarName
-freshTyVar = do
+freshUVar :: GenerateM UVar
+freshUVar = do
   gen <- get
   modify (+1)
-  return ("V" ++ show gen)
+  return (MkUVar gen)
 
 lookupVar :: VarName -> GenerateM SimpleType
 lookupVar v = do
@@ -43,22 +43,22 @@ typeTerm :: Term -> GenerateM SimpleType
 typeTerm (TmLit _) = return (TyPrim PrimInt)
 typeTerm (TmVar v) = lookupVar v
 typeTerm (TmLam var tm) = do
-  tyvar <- TyVar <$> freshTyVar
+  tyvar <- TyVar <$> freshUVar
   ty <- local (\ctx -> M.insert var tyvar ctx) (typeTerm tm)
   return (TyFun tyvar ty)
 typeTerm (TmApp tm1 tm2) = do
   ty1 <- typeTerm tm1
   ty2 <- typeTerm tm2
-  tyVarRes <- freshTyVar
-  generateConstraint ty1 (TyFun ty2 (TyVar tyVarRes))
-  return (TyVar tyVarRes)
+  tyVarRes <- TyVar <$> freshUVar
+  generateConstraint ty1 (TyFun ty2 tyVarRes)
+  return tyVarRes
 typeTerm (TmRcd fs) = do
   fs' <- forM fs (\(lbl, tm) -> do
                      ty <- typeTerm tm
                      return (lbl, ty))
   return (TyRcd fs')
 typeTerm (TmSel tm lbl) = do
-  tyvar <- TyVar <$> freshTyVar
+  tyvar <- TyVar <$> freshUVar
   ty <- typeTerm tm
   generateConstraint ty (TyRcd [(lbl, tyvar)])
   return tyvar
@@ -68,7 +68,7 @@ typeTerm (TmSel tm lbl) = do
 -- Constraint Solving
 ------------------------------------------------------------------------------------------
 
-solveConstraint :: Constraint -> (Map TyVarName VariableState -> Map TyVarName VariableState)
+solveConstraint :: Constraint -> (Map UVar VariableState -> Map UVar VariableState)
 solveConstraint (SubType (TyPrim n) (TyPrim n')) | n == n' = id
 solveConstraint (SubType (TyFun l0 r0) (TyFun l1 r1)) = solveConstraint (SubType l1 l0) . solveConstraint (SubType r0 r1)
 solveConstraint (SubType (TyRcd fs0) (TyRcd fs1)) = \m ->
@@ -102,7 +102,7 @@ solveConstraint (SubType _ty1 _ty2) = error "Cannot constrain types"
 
 data ConstraintSolverState = ConstraintSolverState
   { css_constraints :: [Constraint]
-  , css_partialResult :: Map TyVarName VariableState
+  , css_partialResult :: Map UVar VariableState
   , css_cache :: [Constraint]
   }
 
@@ -124,14 +124,14 @@ stepUntilFinished constraints = initialState : stepStates initialState
       Nothing -> []
       Just s' -> s' : stepStates s'
 
-solveConstraints :: [Constraint] -> Map TyVarName VariableState
+solveConstraints :: [Constraint] -> Map UVar VariableState
 solveConstraints constraints = css_partialResult (last (stepUntilFinished constraints))
 
 ------------------------------------------------------------------------------------------
 -- Zonking
 ------------------------------------------------------------------------------------------
 
-zonk :: SimpleType -> Map TyVarName VariableState -> SimpleTypeR
+zonk :: SimpleType -> Map UVar VariableState -> SimpleTypeR
 zonk (TyVar v) m = case M.lookup v m of
   Nothing -> TyVarR (MkVariableStateR [] [])
   Just vs -> let vs' = zonkVS vs m in TyVarR vs'
@@ -139,7 +139,7 @@ zonk (TyPrim n) _ = TyPrimR n
 zonk (TyFun t1 t2) m = TyFunR (zonk t1 m) (zonk t2 m)
 zonk (TyRcd fs) m = TyRcdR ((\(lbl,ty) -> (lbl, zonk ty m)) <$> fs)
 
-zonkVS :: VariableState -> Map TyVarName VariableState -> VariableStateR
+zonkVS :: VariableState -> Map UVar VariableState -> VariableStateR
 zonkVS MkVariableState { lowerBounds, upperBounds } m =
   let
     lowerBounds' = map (\lb -> zonk lb m) lowerBounds

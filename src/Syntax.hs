@@ -2,7 +2,6 @@ module Syntax where
 
 data Primitive = PrimInt deriving (Show, Eq, Ord)
 type VarName = String
-type TyVarName = String
 type Label = String
 
 ------------------------------------------------------------------------------------------
@@ -23,8 +22,11 @@ data Term
 -- Simple unresolved types
 ------------------------------------------------------------------------------------------
 
+-- | Unification Variable
+newtype UVar = MkUVar { uvar_name :: Int } deriving (Eq, Ord)
+
 data SimpleType
-  = TyVar TyVarName
+  = TyVar UVar
   | TyPrim Primitive
   | TyFun SimpleType SimpleType
   | TyRcd [(Label, SimpleType)]

@@ -28,8 +28,11 @@ printTerm (TmSel tm lbl) = printTerm tm <> "." <> lbl
 printPrimitive :: Primitive -> String
 printPrimitive PrimInt = "Int"
 
+printUVar :: UVar -> String
+printUVar MkUVar { uvar_name } = "U" <> show uvar_name
+
 printSimpleType :: SimpleType -> String
-printSimpleType (TyVar v) = v
+printSimpleType (TyVar v) = printUVar v
 printSimpleType (TyPrim p) = printPrimitive p
 printSimpleType (TyFun t1 t2) =
   let
@@ -98,7 +101,7 @@ printCSS ConstraintSolverState { css_constraints, css_partialResult, css_cache }
           ]
   where
     constraints = concat (intersperse "\n" (printConstraint <$> css_constraints))
-    printPartialResult (var, vs) = var <> " => " <> printVariableState vs
+    printPartialResult (var, vs) = printUVar var <> " => " <> printVariableState vs
     partialResult = concat (intersperse "\n" (printPartialResult <$> (M.assocs css_partialResult)))
     cache = concat (intersperse "\n" (printConstraint <$> css_cache))
 

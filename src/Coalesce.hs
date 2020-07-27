@@ -14,7 +14,7 @@ import Syntax
 
 data CoalescingState = MkCoalescingState
   { inProcess :: Set VariableState
-  , recursive :: Map (Polarity, TyVarName) ()
+  , recursive :: Map (Polarity, UVar) ()
   }
 
 startingState :: CoalescingState
@@ -28,8 +28,8 @@ startingState = MkCoalescingState { inProcess = S.empty, recursive = M.empty }
 --
 -- (U1,Pos) => Union (go Ss)
 -- (U1,Neg) => Inter (go Ts)
-coalesceTypes :: Map TyVarName VariableState
-              -> State CoalescingState (Map (Polarity, TyVarName) TargetType)
+coalesceTypes :: Map UVar VariableState
+              -> State CoalescingState (Map (Polarity, UVar) TargetType)
 coalesceTypes partialResult = undefined
 
 -- coalesceType :: SimpleType -> State (Map PolarVariable ()) TargetType
