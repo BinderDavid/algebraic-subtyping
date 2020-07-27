@@ -2,6 +2,7 @@ module Coalesce where
 
 import Control.Monad.State
 import Data.Map (Map)
+import qualified Data.Map as M
 import Data.Set (Set)
 import qualified Data.Set as S
 
@@ -10,6 +11,26 @@ import Syntax
 ------------------------------------------------------------------------------------------
 -- Type Coalescing
 ------------------------------------------------------------------------------------------
+
+data CoalescingState = MkCoalescingState
+  { inProcess :: Set VariableState
+  , recursive :: Map (Polarity, TyVarName) ()
+  }
+
+startingState :: CoalescingState
+startingState = MkCoalescingState { inProcess = S.empty, recursive = M.empty }
+
+-- Before:
+--
+-- U1 => < lower: Ss, upper: Ts >
+--
+-- After:
+--
+-- (U1,Pos) => Union (go Ss)
+-- (U1,Neg) => Inter (go Ts)
+coalesceTypes :: Map TyVarName VariableState
+              -> State CoalescingState (Map (Polarity, TyVarName) TargetType)
+coalesceTypes partialResult = undefined
 
 -- coalesceType :: SimpleType -> State (Map PolarVariable ()) TargetType
 -- coalesceType ty = go ty Pos S.empty
