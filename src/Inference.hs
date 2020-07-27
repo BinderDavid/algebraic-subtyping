@@ -22,8 +22,8 @@ data Constraint = SubType SimpleType SimpleType deriving (Eq)
 -- - A State for generating fresh type variables
 type GenerateM = ReaderT (Map VarName SimpleType) (WriterT [Constraint] (State Int))
 
--- runGenerateM :: GenerateM a -> (a, [Constraint])
--- runGenerateM m = ...
+runGenerateM :: GenerateM a -> (a, [Constraint])
+runGenerateM m = evalState (runWriterT (runReaderT m M.empty)) 0
 
 freshTyVar :: GenerateM TyVarName
 freshTyVar = do
@@ -100,14 +100,20 @@ stepConstraintSolver ConstraintSolverState { css_constraints = constraint : cons
                                   , css_cache = constraint : css_cache
                                   }
 
+stepUntilFinished :: [Constraint] -> [ConstraintSolverState]
+stepUntilFinished constraints = initialState : stepStates initialState
+  where
+    initialState = ConstraintSolverState { css_constraints = constraints, css_partialResult = M.empty, css_cache = [] }
+    stepStates s = case stepConstraintSolver s of
+      Nothing -> []
+      Just s' -> s' : stepStates s'
+
 solveConstraints :: [Constraint] -> Map TyVarName VariableState
-solveConstraints constraints = foldr solveConstraint M.empty constraints
+solveConstraints constraints = css_partialResult (last (stepUntilFinished constraints))
 
 ------------------------------------------------------------------------------------------
 -- Zonking
 ------------------------------------------------------------------------------------------
-
-
 
 zonk :: SimpleType -> Map TyVarName VariableState -> SimpleTypeR
 zonk (TyVar v) m =
@@ -122,3 +128,17 @@ zonk (TyRcd fs) m = TyRcdR ((\(lbl,ty) -> (lbl, zonk ty m)) <$> fs)
 
 zonkVS :: VariableState -> Map TyVarName VariableState -> VariableStateR
 zonkVS = undefined
+
+
+------------------------------------------------------------------------------------------
+-- Combine
+------------------------------------------------------------------------------------------
+
+infer :: Term -> SimpleTypeR
+infer tm =
+  let
+    (typ, constraints) = runGenerateM (typeTerm tm)
+    subst = solveConstraints constraints
+    res = zonk typ subst
+  in
+    res
