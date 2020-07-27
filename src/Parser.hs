@@ -23,6 +23,7 @@ symbol = L.symbol sc
 termParser :: Parser Term
 termParser = choice
   [ try appParser
+  , try selParser
   , parenP
   , lamParser
   , litParser
@@ -30,7 +31,7 @@ termParser = choice
   , rcdParser
   ]
 
--- | Does not try to parse an application.
+-- | Does not try to parse an application or selection.
 termParserNR :: Parser Term
 termParserNR = choice
   [ parenP
@@ -80,7 +81,11 @@ rcdParser = do
   return (TmRcd cnts)
 
 selParser :: Parser Term
-selParser = return (TmVar "SELPARSER")
+selParser = do
+  tm <- termParserNR
+  _ <- symbol "."
+  lbl <- lexeme ((:) <$> letterChar <*> many alphaNumChar <?> "label")
+  return (TmSel tm lbl)
 
 parseTerm :: String -> Either String Term
 parseTerm input = case runParser (sc >> termParser) "<interactive>" input of

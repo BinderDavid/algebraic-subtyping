@@ -34,6 +34,18 @@ testPairs = [ -- Variants of "x"
             , ("{lbl1=x, lbl2=f y}",        TmRcd [("lbl1", TmVar "x"), ("lbl2", TmApp (TmVar "f") (TmVar "y"))])
             , (" { lbl1 = x , lbl2=f y}",   TmRcd [("lbl1", TmVar "x"), ("lbl2", TmApp (TmVar "f") (TmVar "y"))])
             , ("{lbl1=x, lbl2= (f y)}",     TmRcd [("lbl1", TmVar "x"), ("lbl2", TmApp (TmVar "f") (TmVar "y"))])
+              -- Variants of "x.lbl"
+            , ("x.lbl",     TmSel (TmVar "x") "lbl")
+            , (" x.lbl ",   TmSel (TmVar "x") "lbl")
+            , (" x . lbl ", TmSel (TmVar "x") "lbl")
+            -- Variants of "{ t = 5 }.t"
+            , ("{t=5}.t",       TmSel (TmRcd [("t",TmLit 5)]) "t")
+            , (" { t = 5 }.t ", TmSel (TmRcd [("t",TmLit 5)]) "t")
+            , ("{t=5} . t",     TmSel (TmRcd [("t",TmLit 5)]) "t")
+            -- Variants of "(f x).t"
+            , ("(f x).t",     TmSel (TmApp (TmVar "f") (TmVar "x")) "t")
+            , ("((f x)).t",   TmSel (TmApp (TmVar "f") (TmVar "x")) "t")
+            , ("((f x) . t)", TmSel (TmApp (TmVar "f") (TmVar "x")) "t")
             ]
 
 main :: IO ()
