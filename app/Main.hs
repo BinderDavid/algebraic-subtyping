@@ -4,7 +4,7 @@ import System.Console.Repline
 import Control.Monad.IO.Class (liftIO)
 
 import Parser (parseTerm)
-import Pretty
+import Pretty (inferIO)
 
 type Repl = HaskelineT IO
 
@@ -12,7 +12,7 @@ cmd :: String -> Repl ()
 cmd s = do
   case parseTerm s of
     Left err -> liftIO $ putStrLn err
-    Right tm -> liftIO $ putStrLn $ printTerm tm
+    Right tm -> liftIO $ inferIO tm
 
 ini :: Repl ()
 ini = liftIO $ putStrLn bannerString
