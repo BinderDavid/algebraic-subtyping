@@ -52,8 +52,17 @@ typeTerm (TmApp tm1 tm2) = do
   tyVarRes <- freshTyVar
   generateConstraint ty1 (TyFun ty2 (TyVar tyVarRes))
   return (TyVar tyVarRes)
-typeTerm (TmRcd fs) = undefined
-typeTerm (TmSel tm lbl) = undefined
+typeTerm (TmRcd fs) = do
+  fs' <- forM fs (\(lbl, tm) -> do
+                     ty <- typeTerm tm
+                     return (lbl, ty))
+  return (TyRcd fs')
+typeTerm (TmSel tm lbl) = do
+  tyvar <- TyVar <$> freshTyVar
+  ty <- typeTerm tm
+  generateConstraint ty (TyRcd [(lbl, tyvar)])
+  return tyvar
+
 
 ------------------------------------------------------------------------------------------
 -- Constraint Solving
@@ -62,7 +71,14 @@ typeTerm (TmSel tm lbl) = undefined
 solveConstraint :: Constraint -> (Map TyVarName VariableState -> Map TyVarName VariableState)
 solveConstraint (SubType (TyPrim n) (TyPrim n')) | n == n' = id
 solveConstraint (SubType (TyFun l0 r0) (TyFun l1 r1)) = solveConstraint (SubType l1 l0) . solveConstraint (SubType r0 r1)
-solveConstraint (SubType (TyRcd fs0) (TyRcd fs1)) = undefined
+solveConstraint (SubType (TyRcd fs0) (TyRcd fs1)) = \m ->
+  let
+    foo (lbl, ty) = case lookup lbl fs0 of
+      Nothing -> \_ -> error "Record field does not exist"
+      Just ty' -> solveConstraint (SubType ty' ty)
+    foos = foo <$> fs1
+  in
+    foldr (.) id foos m
 solveConstraint (SubType (TyVar v) ty) = \m ->
   case M.lookup v m of
     Nothing -> M.insert v (MkVariableState [] [ty]) m
