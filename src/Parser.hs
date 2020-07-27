@@ -12,7 +12,7 @@ import Syntax
 type Parser = Parsec Void String
 
 sc :: Parser ()
-sc = L.space space1 (L.skipLineComment "//") (L.skipBlockComment "/*" "*/")
+sc = L.space space1 (L.skipLineComment "--") (L.skipBlockComment "{-" "-}")
 
 lexeme :: Parser a -> Parser a
 lexeme = L.lexeme sc
@@ -21,12 +21,30 @@ symbol :: String -> Parser String
 symbol = L.symbol sc
 
 termParser :: Parser Term
-termParser = litParser <|>
-             varParser <|>
-             lamParser <|>
-             appParser -- <|>
-             -- rcdParser <|>
-             -- selParser
+termParser = choice
+  [ try appParser
+  , parenP
+  , lamParser
+  , litParser
+  , varParser
+  ]
+
+-- | Does not try to parse an application.
+termParserNR :: Parser Term
+termParserNR = choice
+  [ parenP
+  , lamParser
+  , litParser
+  , varParser
+  ]
+
+
+parenP :: Parser Term
+parenP = do
+  _ <- try $ symbol "("
+  t <- termParser
+  _ <- symbol ")"
+  return t
 
 litParser :: Parser Term
 litParser = TmLit <$> lexeme L.decimal
@@ -36,18 +54,16 @@ varParser = TmVar <$>  lexeme ((:) <$> letterChar <*> many alphaNumChar <?> "var
 
 lamParser :: Parser Term
 lamParser = do
-  _ <- symbol "\\"
-  v <- ((:) <$> letterChar <*> many alphaNumChar <?> "variable")
+  _ <- try $ symbol "\\"
+  v <- lexeme ((:) <$> letterChar <*> many alphaNumChar <?> "variable")
   _ <- symbol "."
   t <- termParser
   return (TmLam v t)
 
 appParser :: Parser Term
 appParser = do
-  _ <- symbol "("
-  tm1 <- termParser
+  tm1 <- termParserNR
   tm2 <- termParser
-  _ <- symbol ")"
   return (TmApp tm1 tm2)
 
 rcdParser :: Parser Term
@@ -57,6 +73,6 @@ selParser :: Parser Term
 selParser = return (TmVar "SELPARSER")
 
 parseTerm :: String -> Either String Term
-parseTerm input = case runParser termParser "<interactive>" input of
+parseTerm input = case runParser (sc >> termParser) "<interactive>" input of
   Left err -> Left (errorBundlePretty err)
   Right res -> Right res
