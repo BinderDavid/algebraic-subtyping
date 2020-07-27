@@ -1,9 +1,6 @@
 module Syntax where
 
-import Control.Monad (forM)
-import Data.IORef
-
-type PrimName = String
+data Primitive = PrimInt deriving (Show, Eq, Ord)
 type VarName = String
 type TyVarName = String
 type Label = String
@@ -28,7 +25,7 @@ data Term
 
 data SimpleType
   = TyVar TyVarName
-  | TyPrim PrimName
+  | TyPrim Primitive
   | TyFun SimpleType SimpleType
   | TyRcd [(Label, SimpleType)]
   deriving (Eq, Ord)
@@ -45,7 +42,7 @@ data VariableState = MkVariableState
 
 data SimpleTypeR
   = TyVarR VariableStateR
-  | TyPrimR PrimName
+  | TyPrimR Primitive
   | TyFunR SimpleTypeR SimpleTypeR
   | TyRcdR [(Label, SimpleTypeR)]
   deriving (Eq, Ord)
@@ -69,7 +66,7 @@ data TargetType
   | TTyRcd [(Label, TargetType)]
   | TTyRec VarName TargetType
   | TTyVar VarName
-  | TTyPrim PrimName
+  | TTyPrim Primitive
 
 data Polarity = Pos | Neg deriving (Eq, Ord)
 

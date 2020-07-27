@@ -25,9 +25,12 @@ printTerm (TmSel tm lbl) = printTerm tm <> "." <> lbl
 -- Print simple types
 ------------------------------------------------------------------------------------------
 
+printPrimitive :: Primitive -> String
+printPrimitive PrimInt = "Int"
+
 printSimpleType :: SimpleType -> String
 printSimpleType (TyVar v) = v
-printSimpleType (TyPrim n) = n
+printSimpleType (TyPrim p) = printPrimitive p
 printSimpleType (TyFun t1 t2) =
   let
     t1p = printSimpleType t1
@@ -54,7 +57,7 @@ printVariableState MkVariableState { lowerBounds, upperBounds } =
 
 printSimpleTypeR :: SimpleTypeR -> String
 printSimpleTypeR (TyVarR vs) = printVariableStateR vs
-printSimpleTypeR (TyPrimR n) = n
+printSimpleTypeR (TyPrimR p) = printPrimitive p
 printSimpleTypeR (TyFunR t1 t2) =
   let
     t1p = printSimpleTypeR t1

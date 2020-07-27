@@ -40,7 +40,7 @@ generateConstraint :: SimpleType -> SimpleType -> GenerateM ()
 generateConstraint ty1 ty2 = tell [SubType ty1 ty2]
 
 typeTerm :: Term -> GenerateM SimpleType
-typeTerm (TmLit _) = return (TyPrim "Int")
+typeTerm (TmLit _) = return (TyPrim PrimInt)
 typeTerm (TmVar v) = lookupVar v
 typeTerm (TmLam var tm) = do
   tyvar <- TyVar <$> freshTyVar
