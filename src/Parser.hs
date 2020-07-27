@@ -24,15 +24,15 @@ termParser :: Parser Term
 termParser = litParser <|>
              varParser <|>
              lamParser <|>
-             appParser <|>
-             rcdParser <|>
-             selParser
+             appParser -- <|>
+             -- rcdParser <|>
+             -- selParser
 
 litParser :: Parser Term
 litParser = TmLit <$> lexeme L.decimal
 
 varParser :: Parser Term
-varParser = TmVar <$>  ((:) <$> letterChar <*> many alphaNumChar <?> "variable")
+varParser = TmVar <$>  lexeme ((:) <$> letterChar <*> many alphaNumChar <?> "variable")
 
 lamParser :: Parser Term
 lamParser = do
@@ -44,8 +44,10 @@ lamParser = do
 
 appParser :: Parser Term
 appParser = do
+  _ <- symbol "("
   tm1 <- termParser
   tm2 <- termParser
+  _ <- symbol ")"
   return (TmApp tm1 tm2)
 
 rcdParser :: Parser Term
