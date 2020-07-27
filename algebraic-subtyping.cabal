@@ -32,7 +32,6 @@ library
       Syntax
     , Inference
     , Pretty
-    , Examples
     , Coalesce
     , Parser
   other-modules:
