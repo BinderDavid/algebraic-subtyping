@@ -62,5 +62,6 @@ test-suite algebraic-subtyping-test
       test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      algebraic-subtyping
+                algebraic-subtyping
+              , hspec
   default-language: Haskell2010

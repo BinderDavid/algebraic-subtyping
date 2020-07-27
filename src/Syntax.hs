@@ -17,6 +17,7 @@ data Term
   | TmApp Term Term
   | TmRcd [(Label, Term)]
   | TmSel Term Label
+  deriving (Show, Eq)
 
 ------------------------------------------------------------------------------------------
 -- Simple unresolved types
