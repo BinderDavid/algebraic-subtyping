@@ -30,13 +30,10 @@ testPairs = [ -- Variants of "x"
               -- Variants of "{ lbl = 5 }"
             , ("{lbl=5}",       TmRcd [("lbl", TmLit 5)])
             , (" { lbl = 5 }",  TmRcd [("lbl", TmLit 5)])
-            , ("{lbl=5,}",      TmRcd [("lbl", TmLit 5)])
-            , (" { lbl = 5, }", TmRcd [("lbl", TmLit 5)])
               -- Variants of " { lbl1 = x, lbl2 = f y } "
             , ("{lbl1=x, lbl2=f y}",        TmRcd [("lbl1", TmVar "x"), ("lbl2", TmApp (TmVar "f") (TmVar "y"))])
             , (" { lbl1 = x , lbl2=f y}",   TmRcd [("lbl1", TmVar "x"), ("lbl2", TmApp (TmVar "f") (TmVar "y"))])
             , ("{lbl1=x, lbl2= (f y)}",     TmRcd [("lbl1", TmVar "x"), ("lbl2", TmApp (TmVar "f") (TmVar "y"))])
-            , (" {lbl1=x, lbl2=(f) (y),} ", TmRcd [("lbl1", TmVar "x"), ("lbl2", TmApp (TmVar "f") (TmVar "y"))])
             ]
 
 main :: IO ()

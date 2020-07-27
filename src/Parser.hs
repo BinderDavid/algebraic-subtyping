@@ -27,6 +27,7 @@ termParser = choice
   , lamParser
   , litParser
   , varParser
+  , rcdParser
   ]
 
 -- | Does not try to parse an application.
@@ -36,6 +37,7 @@ termParserNR = choice
   , lamParser
   , litParser
   , varParser
+  , rcdParser
   ]
 
 
@@ -67,7 +69,15 @@ appParser = do
   return (TmApp tm1 tm2)
 
 rcdParser :: Parser Term
-rcdParser = return (TmVar "RCDPARSER")
+rcdParser = do
+  _ <- symbol "{"
+  cnts <- flip sepBy (symbol ",") $ do
+    lbl <- lexeme ((:) <$> letterChar <*> many alphaNumChar <?> "label")
+    _ <- symbol "="
+    tm <- termParser
+    return (lbl, tm)
+  _ <- symbol "}"
+  return (TmRcd cnts)
 
 selParser :: Parser Term
 selParser = return (TmVar "SELPARSER")
