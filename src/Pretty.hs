@@ -35,12 +35,7 @@ printUVar MkUVar { uvar_name } = "U" <> show uvar_name
 printSimpleType :: SimpleType -> String
 printSimpleType (TyVar v) = printUVar v
 printSimpleType (TyPrim p) = printPrimitive p
-printSimpleType (TyFun t1 t2) =
-  let
-    t1p = printSimpleType t1
-    t2p = printSimpleType t2
-  in
-    "(" <> t1p <> " -> " <> t2p <> ")"
+printSimpleType (TyFun ty1 ty2) = "(" <> printSimpleType ty1 <> " -> " <> printSimpleType ty2 <> ")"
 printSimpleType (TyRcd fs) =
   let
     foo (lbl, ty) = lbl <> " : " <> printSimpleType ty <> ", "
@@ -54,6 +49,26 @@ printVariableState MkVariableState { lowerBounds, upperBounds } =
     ubp = map printSimpleType upperBounds
   in
     "< lower: " <> concat (intersperse "," lbp) <> " upper: " <> concat (intersperse "," ubp) <> " >"
+
+------------------------------------------------------------------------------------------
+-- Print Target types
+------------------------------------------------------------------------------------------
+
+printTargetType :: TargetType -> String
+printTargetType (TTyPrim p) = printPrimitive p
+printTargetType TTyTop = "Top"
+printTargetType TTyBot = "Bot"
+printTargetType (TTyUnion ty1 ty2) = "(" <> printTargetType ty1 <> " \\/ " <> printTargetType ty2 <> ")"
+printTargetType (TTyInter ty1 ty2) = "(" <> printTargetType ty1 <> " /\\ " <> printTargetType ty2 <> ")"
+printTargetType (TTyFun ty1 ty2) = "(" <> printTargetType ty1 <> " -> " <> printTargetType ty2 <> ")"
+printTargetType (TTyVar (Pos, v)) = "+" <> printUVar v
+printTargetType (TTyVar (Neg, v)) = "-" <> printUVar v
+printTargetType (TTyRcd fs) =
+  let
+    foo (lbl, ty) = lbl <> " : " <> printTargetType ty <> ", "
+  in
+    "{" <> concat (map foo fs) <> "}"
+printTargetType (TTyRec v ty) = "mu " <> v <> "." <> printTargetType ty
 
 ------------------------------------------------------------------------------------------
 -- Print Constraint Solver States
@@ -76,18 +91,4 @@ printCSS ConstraintSolverState { css_constraints, css_partialResult, css_cache }
     ppConstraints constraints = concat (intersperse "\n" ((\constraint -> "     " <> printConstraint constraint) <$> constraints))
     printPartialResult (var, vs) = "     " <> printUVar var <> " => " <> printVariableState vs
     partialResult = concat (intersperse "\n" (printPartialResult <$> (M.assocs css_partialResult)))
-
-inferIO :: Term -> IO ()
-inferIO tm = do
-  putStrLn "Inferring term and generating constraints..."
-  let (typ, constraints, uvars) = runGenerateM (typeTerm tm)
-  putStrLn "Inferred type:"
-  putStrLn ("     " <> printSimpleType typ)
-  putStrLn "Inferred constraints:"
-  forM_ constraints (\constraint -> putStrLn ("     " <> printConstraint constraint))
-  putStrLn ""
-  putStrLn "Solving constraints..."
-  let solverStates = stepUntilFinished constraints uvars
-  let ppSolverStates = unlines (printCSS <$> solverStates)
-  putStrLn ppSolverStates
 

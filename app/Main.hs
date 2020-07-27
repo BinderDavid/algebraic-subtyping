@@ -1,12 +1,37 @@
 module Main where
 
 import System.Console.Repline
+import Control.Monad (forM_)
 import Control.Monad.IO.Class (liftIO)
 
 import Parser (parseTerm)
-import Pretty (inferIO)
+import Pretty
+import Inference
+import Syntax
+import Coalesce
+
 
 type Repl = HaskelineT IO
+
+inferIO :: Term -> IO ()
+inferIO tm = do
+  -- Constraint generation
+  putStrLn "Inferring term and generating constraints..."
+  let (typ, constraints, uvars) = runGenerateM (typeTerm tm)
+  putStrLn "Inferred type:"
+  putStrLn ("     " <> printSimpleType typ)
+  putStrLn "Inferred constraints:"
+  forM_ constraints (\constraint -> putStrLn ("     " <> printConstraint constraint))
+  putStrLn ""
+  -- Constraint solving
+  putStrLn "Solving constraints..."
+  let solverStates = stepUntilFinished constraints uvars
+  let ppSolverStates = unlines (printCSS <$> solverStates)
+  putStrLn ppSolverStates
+  -- Type coalescing part1
+  putStrLn "Coalescing types..."
+  let resultMap = coalescePart1 (css_partialResult (last solverStates))
+  putStrLn (printCoalescePart1 resultMap)
 
 cmd :: String -> Repl ()
 cmd s = do

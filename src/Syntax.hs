@@ -24,7 +24,7 @@ data Term
 ------------------------------------------------------------------------------------------
 
 -- | Unification Variable
-newtype UVar = MkUVar { uvar_name :: Int } deriving (Eq, Ord)
+newtype UVar = MkUVar { uvar_name :: Int } deriving (Eq, Ord, Show)
 
 data SimpleType
   = TyVar UVar
@@ -51,15 +51,13 @@ data TargetType
   | TTyFun TargetType TargetType
   | TTyRcd [(Label, TargetType)]
   | TTyRec VarName TargetType
-  | TTyVar VarName
+  | TTyVar (Polarity, UVar)
   | TTyPrim Primitive
+  deriving Show
 
-data Polarity = Pos | Neg deriving (Eq, Ord)
+data Polarity = Pos | Neg deriving (Eq, Ord, Show)
 
 switchPol :: Polarity -> Polarity
 switchPol Pos = Neg
 switchPol Neg = Pos
-
-type PolarVariable = (VariableState, Polarity)
-
 

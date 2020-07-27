@@ -1,5 +1,7 @@
+{-# LANGUAGE NamedFieldPuns #-}
 module Coalesce where
 
+import Data.List (intersperse)
 import Control.Monad.State
 import Data.Map (Map)
 import qualified Data.Map as M
@@ -7,59 +9,48 @@ import Data.Set (Set)
 import qualified Data.Set as S
 
 import Syntax
+import Pretty
 
 ------------------------------------------------------------------------------------------
 -- Type Coalescing
 ------------------------------------------------------------------------------------------
 
-data CoalescingState = MkCoalescingState
-  { inProcess :: Set VariableState
-  , recursive :: Map (Polarity, UVar) ()
-  }
+union :: [TargetType] -> TargetType
+union [] = TTyTop
+union [ty] = ty
+union (ty:tys) = TTyUnion ty (union tys)
 
-startingState :: CoalescingState
-startingState = MkCoalescingState { inProcess = S.empty, recursive = M.empty }
+inter :: [TargetType] -> TargetType
+inter [] = TTyBot
+inter [ty] = ty
+inter (ty:tys) = TTyInter ty (inter tys)
 
--- Before:
---
--- U1 => < lower: Ss, upper: Ts >
---
--- After:
---
--- (U1,Pos) => Union (go Ss)
--- (U1,Neg) => Inter (go Ts)
-coalesceTypes :: Map UVar VariableState
-              -> State CoalescingState (Map (Polarity, UVar) TargetType)
-coalesceTypes partialResult = undefined
+bar :: Polarity -> VariableState -> TargetType
+bar Pos MkVariableState { lowerBounds } = union (foo Pos <$> lowerBounds)
+bar Neg MkVariableState { upperBounds } = inter (foo Neg <$> upperBounds)
 
--- coalesceType :: SimpleType -> State (Map PolarVariable ()) TargetType
--- coalesceType ty = go ty Pos S.empty
 
--- go :: SimpleType -> Polarity -> Set PolarVariable -> State (Map PolarVariable ()) TargetType
--- go (TyPrim n) _ _ = return (TTyPrim n)
--- go (TyFun t1 t2) pol inProcess = do
---   tt1 <- go t1 (switchPol pol) inProcess
---   tt2 <- go t2 pol inProcess
---   return (TTyFun tt1 tt2)
--- go (TyRcd fs) pol inProcess = do
---   fs' <- forM fs (\(lbl, ty) -> do
---                      tty <- go ty pol inProcess
---                      return (lbl,tty))
---   return (TTyRcd fs')
--- go (TyVar vs) pol inProcess = do
---   let vs_pol = (vs, pol)
---   case S.member vs_pol inProcess of
---     True -> do
---       recursive <- get
---       undefined
---     False -> do
---       let bounds = case pol of
---             Pos -> lowerBounds vs
---             Neg -> upperBounds vs
---       boundTypes <- undefined
---       let mrg = case pol of
---             Pos -> TTyUnion
---             Neg -> TTyInter
---       let res = undefined
---       undefined
+foo :: Polarity -> SimpleType -> TargetType
+foo _   (TyPrim n) = TTyPrim n
+foo pol (TyFun ty1 ty2) = TTyFun (foo (switchPol pol) ty1) (foo pol ty2)
+foo pol (TyRcd fs) = TTyRcd ((\(lbl, ty) -> (lbl,foo pol ty)) <$> fs)
+foo pol (TyVar v) = TTyVar (pol, v)
+
+coalescePart1 :: Map UVar VariableState -> Map (Polarity, UVar) TargetType
+coalescePart1 m =
+  let
+    elems = M.assocs m
+    blub (uv,st) = [((Pos,uv), bar Pos st), ((Neg,uv), bar Neg st)]
+    blab = concat (blub <$> elems)
+  in
+    M.fromList blab
+
+printCoalescePart1 :: Map (Polarity, UVar) TargetType -> String
+printCoalescePart1 m =
+  let
+    elems = M.assocs m
+    printElement ((Pos,var), tty) = "     +" <> printUVar var <> " => " <> printTargetType tty
+    printElement ((Neg,var), tty) = "     -" <> printUVar var <> " => " <> printTargetType tty
+  in
+    concat (intersperse "\n" (printElement <$> elems))
 
