@@ -99,3 +99,22 @@ printCSS ConstraintSolverState { css_constraints, css_partialResult, css_cache }
     partialResult = concat (intersperse "\n" (printPartialResult <$> (M.assocs css_partialResult)))
     cache = concat (intersperse "\n" (printConstraint <$> css_cache))
 
+
+
+
+inferIO :: Term -> IO SimpleTypeR
+inferIO tm = do
+  putStrLn ("Inferring type for term: " <> printTerm tm)
+  let (typ, constraints) = runGenerateM (typeTerm tm)
+  putStrLn ("Inferred the type: " <> printSimpleType typ)
+  putStrLn "Start constraint solving..."
+  let solverStates = stepUntilFinished constraints
+  let ppSolverStates = unlines (printCSS <$> solverStates)
+  putStrLn ppSolverStates
+  putStrLn "Start zonking..."
+  let finalResult = css_partialResult (last (stepUntilFinished constraints))
+  let res = zonk typ finalResult
+  putStrLn "Final result:"
+  putStrLn (printSimpleTypeR res)
+  return res
+

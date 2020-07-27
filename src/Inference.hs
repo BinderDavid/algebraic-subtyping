@@ -116,18 +116,20 @@ solveConstraints constraints = css_partialResult (last (stepUntilFinished constr
 ------------------------------------------------------------------------------------------
 
 zonk :: SimpleType -> Map TyVarName VariableState -> SimpleTypeR
-zonk (TyVar v) m =
-  let
-    vs = m M.! v
-    vs' = zonkVS vs m
-  in
-    TyVarR vs'
+zonk (TyVar v) m = case M.lookup v m of
+  Nothing -> TyVarR (MkVariableStateR [] [])
+  Just vs -> let vs' = zonkVS vs m in TyVarR vs'
 zonk (TyPrim n) _ = TyPrimR n
 zonk (TyFun t1 t2) m = TyFunR (zonk t1 m) (zonk t2 m)
 zonk (TyRcd fs) m = TyRcdR ((\(lbl,ty) -> (lbl, zonk ty m)) <$> fs)
 
 zonkVS :: VariableState -> Map TyVarName VariableState -> VariableStateR
-zonkVS = undefined
+zonkVS MkVariableState { lowerBounds, upperBounds } m =
+  let
+    lowerBounds' = map (\lb -> zonk lb m) lowerBounds
+    upperBounds' = map (\ub -> zonk ub m) upperBounds
+  in
+    MkVariableStateR lowerBounds' upperBounds'
 
 
 ------------------------------------------------------------------------------------------
@@ -142,3 +144,5 @@ infer tm =
     res = zonk typ subst
   in
     res
+
+
