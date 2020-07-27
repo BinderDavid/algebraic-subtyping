@@ -1,6 +1,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 module Pretty where
 
+import Control.Monad (forM_)
 import Data.List (intersperse)
 import qualified Data.Map as M
 
@@ -63,27 +64,29 @@ printConstraint (SubType ty1 ty2) = printSimpleType ty1 <> " <: " <> printSimple
 
 printCSS :: ConstraintSolverState -> String
 printCSS ConstraintSolverState { css_constraints, css_partialResult, css_cache } =
-  unlines [ "---------------------------------------------------------------------------------------"
+  unlines [ "==="
           , "Constraints:"
-          , constraints
+          , ppConstraints css_constraints
           , "Partial result:"
           , partialResult
           , "Cache:"
-          , cache
-          , "---------------------------------------------------------------------------------------"
+          , ppConstraints css_cache
           ]
   where
-    constraints = concat (intersperse "\n" (printConstraint <$> css_constraints))
-    printPartialResult (var, vs) = printUVar var <> " => " <> printVariableState vs
+    ppConstraints constraints = concat (intersperse "\n" ((\constraint -> "     " <> printConstraint constraint) <$> constraints))
+    printPartialResult (var, vs) = "     " <> printUVar var <> " => " <> printVariableState vs
     partialResult = concat (intersperse "\n" (printPartialResult <$> (M.assocs css_partialResult)))
-    cache = concat (intersperse "\n" (printConstraint <$> css_cache))
 
 inferIO :: Term -> IO ()
 inferIO tm = do
-  putStrLn ("Inferring type for term: " <> printTerm tm)
+  putStrLn "Inferring term and generating constraints..."
   let (typ, constraints, uvars) = runGenerateM (typeTerm tm)
-  putStrLn ("Inferred the type: " <> printSimpleType typ)
-  putStrLn "Start constraint solving..."
+  putStrLn "Inferred type:"
+  putStrLn ("     " <> printSimpleType typ)
+  putStrLn "Inferred constraints:"
+  forM_ constraints (\constraint -> putStrLn ("     " <> printConstraint constraint))
+  putStrLn ""
+  putStrLn "Solving constraints..."
   let solverStates = stepUntilFinished constraints uvars
   let ppSolverStates = unlines (printCSS <$> solverStates)
   putStrLn ppSolverStates
