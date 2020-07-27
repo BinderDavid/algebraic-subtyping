@@ -3,10 +3,16 @@ module Main where
 import System.Console.Repline
 import Control.Monad.IO.Class (liftIO)
 
+import Parser (parseTerm)
+import Pretty
+
 type Repl = HaskelineT IO
 
 cmd :: String -> Repl ()
-cmd s = liftIO $ putStrLn s
+cmd s = do
+  case parseTerm s of
+    Left err -> liftIO $ putStrLn err
+    Right tm -> liftIO $ putStrLn $ printTerm tm
 
 ini :: Repl ()
 ini = liftIO $ putStrLn bannerString
