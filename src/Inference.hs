@@ -127,38 +127,3 @@ stepUntilFinished constraints = initialState : stepStates initialState
 solveConstraints :: [Constraint] -> Map UVar VariableState
 solveConstraints constraints = css_partialResult (last (stepUntilFinished constraints))
 
-------------------------------------------------------------------------------------------
--- Zonking
-------------------------------------------------------------------------------------------
-
-zonk :: SimpleType -> Map UVar VariableState -> SimpleTypeR
-zonk (TyVar v) m = case M.lookup v m of
-  Nothing -> TyVarR (MkVariableStateR [] [])
-  Just vs -> let vs' = zonkVS vs m in TyVarR vs'
-zonk (TyPrim n) _ = TyPrimR n
-zonk (TyFun t1 t2) m = TyFunR (zonk t1 m) (zonk t2 m)
-zonk (TyRcd fs) m = TyRcdR ((\(lbl,ty) -> (lbl, zonk ty m)) <$> fs)
-
-zonkVS :: VariableState -> Map UVar VariableState -> VariableStateR
-zonkVS MkVariableState { lowerBounds, upperBounds } m =
-  let
-    lowerBounds' = map (\lb -> zonk lb m) lowerBounds
-    upperBounds' = map (\ub -> zonk ub m) upperBounds
-  in
-    MkVariableStateR lowerBounds' upperBounds'
-
-
-------------------------------------------------------------------------------------------
--- Combine
-------------------------------------------------------------------------------------------
-
-infer :: Term -> SimpleTypeR
-infer tm =
-  let
-    (typ, constraints) = runGenerateM (typeTerm tm)
-    subst = solveConstraints constraints
-    res = zonk typ subst
-  in
-    res
-
-

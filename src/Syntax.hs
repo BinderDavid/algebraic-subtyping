@@ -39,23 +39,6 @@ data VariableState = MkVariableState
   deriving (Eq, Ord)
 
 ------------------------------------------------------------------------------------------
--- Simple resolved types
-------------------------------------------------------------------------------------------
-
-data SimpleTypeR
-  = TyVarR VariableStateR
-  | TyPrimR Primitive
-  | TyFunR SimpleTypeR SimpleTypeR
-  | TyRcdR [(Label, SimpleTypeR)]
-  deriving (Eq, Ord)
-
-data VariableStateR = MkVariableStateR
-  { lowerBoundsR :: [SimpleTypeR]
-  , upperBoundsR :: [SimpleTypeR]
-  }
-  deriving (Eq, Ord)
-
-------------------------------------------------------------------------------------------
 -- Target Types
 ------------------------------------------------------------------------------------------
 

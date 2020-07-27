@@ -55,34 +55,7 @@ printVariableState MkVariableState { lowerBounds, upperBounds } =
     "< lower: " <> concat (intersperse "," lbp) <> " upper: " <> concat (intersperse "," ubp) <> " >"
 
 ------------------------------------------------------------------------------------------
--- Print resolved types
-------------------------------------------------------------------------------------------
-
-printSimpleTypeR :: SimpleTypeR -> String
-printSimpleTypeR (TyVarR vs) = printVariableStateR vs
-printSimpleTypeR (TyPrimR p) = printPrimitive p
-printSimpleTypeR (TyFunR t1 t2) =
-  let
-    t1p = printSimpleTypeR t1
-    t2p = printSimpleTypeR t2
-  in
-    "(" <> t1p <> " -> " <> t2p <> ")"
-printSimpleTypeR (TyRcdR fs) =
-  let
-    foo (lbl, ty) = lbl <> " : " <> printSimpleTypeR ty <> ", "
-  in
-    "{" <> concat (map foo fs) <> "}"
-
-printVariableStateR :: VariableStateR -> String
-printVariableStateR MkVariableStateR { lowerBoundsR, upperBoundsR } =
-  let
-    lbp = map printSimpleTypeR lowerBoundsR
-    ubp = map printSimpleTypeR upperBoundsR
-  in
-    "< lower: " <> concat (intersperse "," lbp) <> " upper: " <> concat (intersperse "," ubp) <> " >"
-
-------------------------------------------------------------------------------------------
--- Print resolved types
+-- Print Constraint Solver States
 ------------------------------------------------------------------------------------------
 
 printConstraint :: Constraint -> String
@@ -105,10 +78,7 @@ printCSS ConstraintSolverState { css_constraints, css_partialResult, css_cache }
     partialResult = concat (intersperse "\n" (printPartialResult <$> (M.assocs css_partialResult)))
     cache = concat (intersperse "\n" (printConstraint <$> css_cache))
 
-
-
-
-inferIO :: Term -> IO SimpleTypeR
+inferIO :: Term -> IO ()
 inferIO tm = do
   putStrLn ("Inferring type for term: " <> printTerm tm)
   let (typ, constraints) = runGenerateM (typeTerm tm)
@@ -117,10 +87,4 @@ inferIO tm = do
   let solverStates = stepUntilFinished constraints
   let ppSolverStates = unlines (printCSS <$> solverStates)
   putStrLn ppSolverStates
-  putStrLn "Start zonking..."
-  let finalResult = css_partialResult (last (stepUntilFinished constraints))
-  let res = zonk typ finalResult
-  putStrLn "Final result:"
-  putStrLn (printSimpleTypeR res)
-  return res
 
