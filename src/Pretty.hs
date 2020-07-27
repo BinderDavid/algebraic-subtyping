@@ -81,10 +81,10 @@ printCSS ConstraintSolverState { css_constraints, css_partialResult, css_cache }
 inferIO :: Term -> IO ()
 inferIO tm = do
   putStrLn ("Inferring type for term: " <> printTerm tm)
-  let (typ, constraints) = runGenerateM (typeTerm tm)
+  let (typ, constraints, uvars) = runGenerateM (typeTerm tm)
   putStrLn ("Inferred the type: " <> printSimpleType typ)
   putStrLn "Start constraint solving..."
-  let solverStates = stepUntilFinished constraints
+  let solverStates = stepUntilFinished constraints uvars
   let ppSolverStates = unlines (printCSS <$> solverStates)
   putStrLn ppSolverStates
 

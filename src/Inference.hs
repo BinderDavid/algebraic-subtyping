@@ -22,8 +22,8 @@ data Constraint = SubType SimpleType SimpleType deriving (Eq)
 -- - A State for generating fresh unification variables
 type GenerateM = ReaderT (Map VarName SimpleType) (WriterT [Constraint] (State Int))
 
-runGenerateM :: GenerateM a -> (a, [Constraint])
-runGenerateM m = evalState (runWriterT (runReaderT m M.empty)) 0
+runGenerateM :: GenerateM a -> (a, [Constraint], [UVar])
+runGenerateM m =(\((x,y),z) -> (x,y,MkUVar <$> [0..(z-1)])) (runState (runWriterT (runReaderT m M.empty)) 0)
 
 freshUVar :: GenerateM UVar
 freshUVar = do
@@ -116,14 +116,16 @@ stepConstraintSolver ConstraintSolverState { css_constraints = constraint : cons
                                   , css_cache = constraint : css_cache
                                   }
 
-stepUntilFinished :: [Constraint] -> [ConstraintSolverState]
-stepUntilFinished constraints = initialState : stepStates initialState
+stepUntilFinished :: [Constraint] -> [UVar] -> [ConstraintSolverState]
+stepUntilFinished constraints uvars = initialState : stepStates initialState
   where
-    initialState = ConstraintSolverState { css_constraints = constraints, css_partialResult = M.empty, css_cache = [] }
+    initialState = ConstraintSolverState { css_constraints = constraints
+                                         , css_partialResult = M.fromList ((\uvar -> (uvar,MkVariableState [] [])) <$> uvars)
+                                         , css_cache = [] }
     stepStates s = case stepConstraintSolver s of
       Nothing -> []
       Just s' -> s' : stepStates s'
 
-solveConstraints :: [Constraint] -> Map UVar VariableState
-solveConstraints constraints = css_partialResult (last (stepUntilFinished constraints))
+solveConstraints :: [Constraint] -> [UVar] ->  Map UVar VariableState
+solveConstraints constraints uvars = css_partialResult (last (stepUntilFinished constraints uvars))
 
