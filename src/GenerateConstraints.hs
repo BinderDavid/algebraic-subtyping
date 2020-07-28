@@ -1,5 +1,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 module GenerateConstraints
   ( Constraint(..)
@@ -25,26 +26,31 @@ data Constraint = SubType SimpleType SimpleType deriving (Eq, Show)
 type Error = String
 
 -- During constraint generation we need:
--- - A Except for throwing errors.
--- - A Reader for the local variable context
--- - A Writer for the generated constraints
--- - A State for generating fresh unification variables
-type GenerateM = ReaderT (Map VarName SimpleType) (WriterT [Constraint] (StateT Int (Except Error)))
+-- - ReaderT for the local variable context.
+-- - WriterT for collecting the generated constraints.
+-- - StateT for generating fresh unification variables.
+-- - Except for throwing errors when a free variable is encountered.
+newtype GenerateM a = MkGenerateM
+  { unGenerateM :: ReaderT (Map VarName SimpleType)(WriterT [Constraint](StateT Int (Except Error))) a
+  } deriving (Functor, Applicative, Monad, MonadState Int, MonadReader (Map VarName SimpleType), MonadError Error, MonadWriter [Constraint])
+
 
 runGenerateM :: forall a. GenerateM a -> Either Error (a, [Constraint], [UVar])
 runGenerateM m =
   let
     res :: Either Error ((a, [Constraint]), Int)
-    res = runExcept (runStateT (runWriterT (runReaderT  m M.empty)) 0)
+    res = runExcept (runStateT (runWriterT (runReaderT  (unGenerateM m) M.empty)) 0)
   in
     bimap id (\((x,y),z) -> (x,y,MkUVar <$> [0..(z-1)])) res
 
+-- | Generate a fresh unification variable.
 freshUVar :: GenerateM UVar
 freshUVar = do
   gen <- get
   modify (+1)
   return (MkUVar gen)
 
+-- | Lookup the type of a variable from the local context.
 lookupVar :: VarName -> GenerateM SimpleType
 lookupVar v = do
   ctx <- ask
@@ -52,9 +58,12 @@ lookupVar v = do
     Nothing -> throwError ("Free variable error: Variable " <> v <> " is not in the context")
     Just ty -> return ty
 
+-- | Add a subtype constraint.
 addConstraint :: SimpleType -> SimpleType -> GenerateM ()
 addConstraint ty1 ty2 = tell [SubType ty1 ty2]
 
+-- | Generate the SimpleType of a term, which includes unresolved unification variables.
+-- This also generates a set of unification variables and constraints them.
 typeTerm :: Term -> GenerateM SimpleType
 typeTerm (TmLit _) = return (TyPrim PrimInt)
 typeTerm (TmVar v) = lookupVar v
