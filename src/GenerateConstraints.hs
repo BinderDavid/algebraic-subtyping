@@ -91,3 +91,5 @@ typeTerm (TmSel tm lbl) = do
 
 generateConstraints :: Term -> Either Error (SimpleType, [Constraint], [UVar])
 generateConstraints tm = runGenerateM (typeTerm tm)
+
+

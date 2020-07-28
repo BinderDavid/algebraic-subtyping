@@ -51,7 +51,7 @@ data VariableState = MkVariableState
 -- Target Types
 ------------------------------------------------------------------------------------------
 
-newtype TVar = MkTVar { tvar_name :: String } deriving (Eq, Show)
+newtype TVar = MkTVar { tvar_name :: String } deriving (Eq, Show, Ord)
 
 uvarToTVar :: UVar -> TVar
 uvarToTVar (MkUVar i) = MkTVar ("U" <> show i)
@@ -74,5 +74,9 @@ data TargetType
   | TTyPrim Primitive
   deriving Show
 
+------------------------------------------------------------------------------------------
+-- Type schemes
+------------------------------------------------------------------------------------------
 
+type TypeScheme = ([TVar], TargetType)
 

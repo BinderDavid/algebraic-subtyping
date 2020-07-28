@@ -35,6 +35,14 @@ inferIO tm = do
       putStrLn "Coalescing types..."
       let resultMap = coalesceMap (css_partialResult (last solverStates))
       putStrLn (printCoalesceMap resultMap)
+      -- Zonking
+      putStrLn "Zonking..."
+      let inferredType = zonk resultMap Pos typ
+      putStrLn (printTargetType inferredType)
+      -- Generalizing
+      putStrLn "Generalizing"
+      let generalizedType = generalize inferredType
+      putStrLn (printTypeScheme generalizedType)
 
 cmd :: String -> Repl ()
 cmd s = do

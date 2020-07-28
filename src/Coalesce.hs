@@ -1,5 +1,10 @@
 {-# LANGUAGE NamedFieldPuns #-}
-module Coalesce where
+module Coalesce
+  ( coalesceMap
+  , printCoalesceMap
+  , zonk
+  , generalize
+  ) where
 
 import Data.List (intersperse)
 import Data.Map (Map)
@@ -79,3 +84,37 @@ printCoalesceMap m =
   in
     concat (intersperse "\n" (printElement <$> elems))
 
+------------------------------------------------------------------------------------------
+-- Zonking
+------------------------------------------------------------------------------------------
+
+zonk :: Map PolarizedUVar TargetType -> Polarity -> SimpleType -> TargetType
+zonk _ _   (TyPrim p) = TTyPrim p
+zonk m pol (TyVar uv) = m M.! (pol,uv)
+zonk m pol (TyRcd fs) =
+  let
+    fs' = (\(lbl,ty) -> (lbl, zonk m pol ty)) <$> fs
+  in
+    TTyRcd fs'
+zonk m pol (TyFun ty1 ty2) = TTyFun (zonk m (switchPol pol) ty1) (zonk m pol ty2)
+
+------------------------------------------------------------------------------------------
+-- Generalize
+------------------------------------------------------------------------------------------
+
+freeTVars :: TargetType -> [TVar]
+freeTVars tt = S.elems (freeTVars' tt)
+  where
+    freeTVars' :: TargetType -> Set TVar
+    freeTVars' TTyTop = S.empty
+    freeTVars' TTyBot = S.empty
+    freeTVars' (TTyUnion tt1 tt2) = S.union (freeTVars' tt1) (freeTVars' tt2)
+    freeTVars' (TTyInter tt1 tt2) = S.union (freeTVars' tt1) (freeTVars' tt2)
+    freeTVars' (TTyFun tt1 tt2) = S.union (freeTVars' tt1) (freeTVars' tt2)
+    freeTVars' (TTyRcd fs) = S.unions ((\(_,tt) -> freeTVars' tt) <$> fs)
+    freeTVars' (TTyRec v tt) = S.delete v (freeTVars' tt)
+    freeTVars' (TTyVar v) = S.singleton v
+    freeTVars' (TTyPrim _) = S.empty
+
+generalize :: TargetType -> TypeScheme
+generalize tt = (freeTVars tt, tt)

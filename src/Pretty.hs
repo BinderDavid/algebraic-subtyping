@@ -73,6 +73,13 @@ printTargetType (TTyRcd fs) =
 printTargetType (TTyRec v ty) = "mu " <> printTVar v <> "." <> printTargetType ty
 
 ------------------------------------------------------------------------------------------
+-- Print Type schemes
+------------------------------------------------------------------------------------------
+
+printTypeScheme :: TypeScheme -> String
+printTypeScheme (vars,tt) = "forall " <> concat (intersperse " " (printTVar <$> vars)) <> "." <> printTargetType tt
+
+------------------------------------------------------------------------------------------
 -- Print Constraint Solver States
 ------------------------------------------------------------------------------------------
 
