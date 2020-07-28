@@ -1,9 +1,13 @@
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE NamedFieldPuns #-}
 module Inference where
 
 import Control.Monad.State
 import Control.Monad.Reader
 import Control.Monad.Writer
+import Control.Monad.Except
+import Data.Bifunctor (bimap)
 
 import Data.Map (Map)
 import qualified Data.Map as M
@@ -15,15 +19,22 @@ import Syntax
 ------------------------------------------------------------------------------------------
 
 data Constraint = SubType SimpleType SimpleType deriving (Eq)
+type Error = String
 
 -- During constraint generation we need:
+-- - A Except for throwing errors.
 -- - A Reader for the local variable context
 -- - A Writer for the generated constraints
 -- - A State for generating fresh unification variables
-type GenerateM = ReaderT (Map VarName SimpleType) (WriterT [Constraint] (State Int))
+type GenerateM = ReaderT (Map VarName SimpleType) (WriterT [Constraint] (StateT Int (Except Error)))
 
-runGenerateM :: GenerateM a -> (a, [Constraint], [UVar])
-runGenerateM m =(\((x,y),z) -> (x,y,MkUVar <$> [0..(z-1)])) (runState (runWriterT (runReaderT m M.empty)) 0)
+runGenerateM :: forall a. GenerateM a -> Either Error (a, [Constraint], [UVar])
+runGenerateM m =
+  let
+    res :: Either Error ((a, [Constraint]), Int)
+    res = runExcept (runStateT (runWriterT (runReaderT  m M.empty)) 0)
+  in
+    bimap id (\((x,y),z) -> (x,y,MkUVar <$> [0..(z-1)])) res
 
 freshUVar :: GenerateM UVar
 freshUVar = do
@@ -34,7 +45,9 @@ freshUVar = do
 lookupVar :: VarName -> GenerateM SimpleType
 lookupVar v = do
   ctx <- ask
-  return (ctx M.! v)
+  case M.lookup v ctx of
+    Nothing -> throwError ("Free variable error: Variable " <> v <> " is not in the context")
+    Just ty -> return ty
 
 generateConstraint :: SimpleType -> SimpleType -> GenerateM ()
 generateConstraint ty1 ty2 = tell [SubType ty1 ty2]
