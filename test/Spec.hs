@@ -63,4 +63,9 @@ main = hspec $ do
       generateConstraints (TmLam "x" (TmVar "y")) `shouldSatisfy` isLeft
     it "(\\x.2) x generates an error" $ do
       generateConstraints (TmApp (TmLam "x" (TmLit 2)) (TmVar "x")) `shouldSatisfy` isLeft
+    it "2 should generate type Int and no constraints" $ do
+      generateConstraints (TmLit 2) `shouldBe` (Right (TyPrim PrimInt,[],[]))
+    it "\\x.x should generate type U0 -> U0 and no constraints" $ do
+      let u0 = MkUVar 0
+      generateConstraints (TmLam "x" (TmVar "x")) `shouldBe` (Right (TyFun (TyVar u0) (TyVar u0),[],[u0]))
 
