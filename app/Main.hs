@@ -9,6 +9,7 @@ import Pretty
 import Inference
 import Syntax
 import Coalesce
+import GenerateConstraints
 
 
 type Repl = HaskelineT IO
@@ -17,7 +18,7 @@ inferIO :: Term -> IO ()
 inferIO tm = do
   -- Constraint generation
   putStrLn "Inferring term and generating constraints..."
-  case runGenerateM (typeTerm tm) of
+  case generateConstraints tm of
     Left err -> putStrLn err
     Right (typ, constraints, uvars) -> do
       putStrLn "Inferred type:"

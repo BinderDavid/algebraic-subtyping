@@ -34,6 +34,7 @@ library
     , Pretty
     , Coalesce
     , Parser
+    , GenerateConstraints
   other-modules:
       Paths_algebraic_subtyping
   hs-source-dirs:

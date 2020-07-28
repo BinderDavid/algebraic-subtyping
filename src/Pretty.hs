@@ -1,12 +1,12 @@
 {-# LANGUAGE NamedFieldPuns #-}
 module Pretty where
 
-import Control.Monad (forM_)
 import Data.List (intersperse)
 import qualified Data.Map as M
 
 import Syntax
 import Inference
+import GenerateConstraints
 
 ------------------------------------------------------------------------------------------
 -- Print Terms
