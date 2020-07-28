@@ -2,7 +2,6 @@
 module Coalesce where
 
 import Data.List (intersperse)
-import Control.Monad.State
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Set (Set)
@@ -25,28 +24,54 @@ inter [] = TTyBot
 inter [ty] = ty
 inter (ty:tys) = TTyInter ty (inter tys)
 
-bar :: Polarity -> VariableState -> TargetType
-bar Pos MkVariableState { lowerBounds } = union (foo Pos <$> lowerBounds)
-bar Neg MkVariableState { upperBounds } = inter (foo Neg <$> upperBounds)
-
-
-foo :: Polarity -> SimpleType -> TargetType
-foo _   (TyPrim n) = TTyPrim n
-foo pol (TyFun ty1 ty2) = TTyFun (foo (switchPol pol) ty1) (foo pol ty2)
-foo pol (TyRcd fs) = TTyRcd ((\(lbl, ty) -> (lbl,foo pol ty)) <$> fs)
-foo pol (TyVar v) = TTyVar (pol, v)
-
-coalescePart1 :: Map UVar VariableState -> Map (Polarity, UVar) TargetType
-coalescePart1 m =
+coalesce :: Map UVar VariableState -> Set PolarizedUVar -> Polarity -> SimpleType -> TargetType
+coalesce _ _ _ (TyPrim p) = TTyPrim p
+coalesce mp cache pol (TyFun ty1 ty2) =
   let
-    elems = M.assocs m
-    blub (uv,st) = [((Pos,uv), bar Pos st), ((Neg,uv), bar Neg st)]
+    tty1 = coalesce mp cache (switchPol pol) ty1
+    tty2 = coalesce mp cache            pol  ty2
+  in
+    TTyFun tty1 tty2
+coalesce mp cache pol (TyRcd fs) =
+  let
+    fs' = undefined
+  in
+    TTyRcd fs'
+coalesce mp cache Pos (TyVar uv) =
+  case (Pos,uv) `S.member` cache of
+    True -> TTyVar (uvarToTVarP uv)
+    False ->
+      let
+        newCache = S.insert (Pos, uv) cache
+        lbs = lowerBounds (mp M.! uv)
+        ttlbs = coalesce mp newCache Pos <$> lbs
+        ttunion = union (TTyVar (uvarToTVar uv) : ttlbs)
+      in
+        TTyRec (uvarToTVarP uv) ttunion
+coalesce mp cache Neg (TyVar uv) =
+  case (Neg,uv) `S.member` cache of
+    True -> TTyVar (uvarToTVarN uv)
+    False ->
+      let
+        newCache = S.insert (Neg, uv) cache
+        lbs = upperBounds (mp M.! uv)
+        ttlbs = coalesce mp newCache Neg <$> lbs
+        ttunion = inter (TTyVar (uvarToTVar uv) : ttlbs)
+      in
+        TTyRec (uvarToTVarP uv) ttunion
+
+coalesceMap :: Map UVar VariableState -> Map PolarizedUVar TargetType
+coalesceMap m =
+  let
+    elems = M.keys m
+    blub uv = [ ((Pos,uv), coalesce m S.empty Pos (TyVar uv))
+              , ((Neg,uv), coalesce m S.empty Neg (TyVar uv))]
     blab = concat (blub <$> elems)
   in
     M.fromList blab
 
-printCoalescePart1 :: Map (Polarity, UVar) TargetType -> String
-printCoalescePart1 m =
+printCoalesceMap :: Map PolarizedUVar TargetType -> String
+printCoalesceMap m =
   let
     elems = M.assocs m
     printElement ((Pos,var), tty) = "     +" <> printUVar var <> " => " <> printTargetType tty

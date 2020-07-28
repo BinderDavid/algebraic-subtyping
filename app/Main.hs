@@ -33,8 +33,8 @@ inferIO tm = do
       putStrLn ppSolverStates
       -- Type coalescing part1
       putStrLn "Coalescing types..."
-      let resultMap = coalescePart1 (css_partialResult (last solverStates))
-      putStrLn (printCoalescePart1 resultMap)
+      let resultMap = coalesceMap (css_partialResult (last solverStates))
+      putStrLn (printCoalesceMap resultMap)
 
 cmd :: String -> Repl ()
 cmd s = do

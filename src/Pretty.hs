@@ -54,6 +54,9 @@ printVariableState MkVariableState { lowerBounds, upperBounds } =
 -- Print Target types
 ------------------------------------------------------------------------------------------
 
+printTVar :: TVar -> String
+printTVar (MkTVar n) = n
+
 printTargetType :: TargetType -> String
 printTargetType (TTyPrim p) = printPrimitive p
 printTargetType TTyTop = "Top"
@@ -61,14 +64,13 @@ printTargetType TTyBot = "Bot"
 printTargetType (TTyUnion ty1 ty2) = "(" <> printTargetType ty1 <> " \\/ " <> printTargetType ty2 <> ")"
 printTargetType (TTyInter ty1 ty2) = "(" <> printTargetType ty1 <> " /\\ " <> printTargetType ty2 <> ")"
 printTargetType (TTyFun ty1 ty2) = "(" <> printTargetType ty1 <> " -> " <> printTargetType ty2 <> ")"
-printTargetType (TTyVar (Pos, v)) = "+" <> printUVar v
-printTargetType (TTyVar (Neg, v)) = "-" <> printUVar v
+printTargetType (TTyVar tv) = printTVar tv
 printTargetType (TTyRcd fs) =
   let
     foo (lbl, ty) = lbl <> " : " <> printTargetType ty <> ", "
   in
     "{" <> concat (map foo fs) <> "}"
-printTargetType (TTyRec v ty) = "mu " <> v <> "." <> printTargetType ty
+printTargetType (TTyRec v ty) = "mu " <> printTVar v <> "." <> printTargetType ty
 
 ------------------------------------------------------------------------------------------
 -- Print Constraint Solver States

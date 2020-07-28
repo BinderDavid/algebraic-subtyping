@@ -23,8 +23,16 @@ data Term
 -- Simple unresolved types
 ------------------------------------------------------------------------------------------
 
+data Polarity = Pos | Neg deriving (Eq, Ord, Show)
+
+switchPol :: Polarity -> Polarity
+switchPol Pos = Neg
+switchPol Neg = Pos
+
 -- | Unification Variable
 newtype UVar = MkUVar { uvar_name :: Int } deriving (Eq, Ord, Show)
+
+type PolarizedUVar = (Polarity, UVar)
 
 data SimpleType
   = TyVar UVar
@@ -43,6 +51,17 @@ data VariableState = MkVariableState
 -- Target Types
 ------------------------------------------------------------------------------------------
 
+newtype TVar = MkTVar { tvar_name :: String } deriving (Eq, Show)
+
+uvarToTVar :: UVar -> TVar
+uvarToTVar (MkUVar i) = MkTVar ("U" <> show i)
+
+uvarToTVarP :: UVar -> TVar
+uvarToTVarP (MkUVar i) = MkTVar ("P" <> show i)
+
+uvarToTVarN :: UVar -> TVar
+uvarToTVarN (MkUVar i) = MkTVar ("N" <> show i)
+
 data TargetType
   = TTyTop
   | TTyBot
@@ -50,14 +69,10 @@ data TargetType
   | TTyInter TargetType TargetType
   | TTyFun TargetType TargetType
   | TTyRcd [(Label, TargetType)]
-  | TTyRec VarName TargetType
-  | TTyVar (Polarity, UVar)
+  | TTyRec TVar TargetType
+  | TTyVar TVar
   | TTyPrim Primitive
   deriving Show
 
-data Polarity = Pos | Neg deriving (Eq, Ord, Show)
 
-switchPol :: Polarity -> Polarity
-switchPol Pos = Neg
-switchPol Neg = Pos
 
