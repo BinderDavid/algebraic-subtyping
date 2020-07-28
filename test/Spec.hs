@@ -1,8 +1,10 @@
 import Test.Hspec
 
 import Control.Monad (forM_)
+import Data.Either (isLeft)
 import Parser (parseTerm)
 import Syntax
+import GenerateConstraints
 
 testPairs :: [(String, Term)]
 testPairs = [ -- Variants of "x"
@@ -54,4 +56,11 @@ main = hspec $ do
     forM_ testPairs (\(str, res) -> do
                        it ("\"" <> str <> "\" parses correctly") $ do
                          parseTerm str `shouldBe` Right res)
+  describe "Constraint Generation" $ do
+    it "x generates an error" $ do
+      generateConstraints (TmVar "x") `shouldSatisfy` isLeft
+    it "\\x.y generates an error" $ do
+      generateConstraints (TmLam "x" (TmVar "y")) `shouldSatisfy` isLeft
+    it "(\\x.2) x generates an error" $ do
+      generateConstraints (TmApp (TmLam "x" (TmLit 2)) (TmVar "x")) `shouldSatisfy` isLeft
 

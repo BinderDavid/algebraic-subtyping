@@ -21,7 +21,7 @@ import Syntax
 -- Constraint generation
 ------------------------------------------------------------------------------------------
 
-data Constraint = SubType SimpleType SimpleType deriving (Eq)
+data Constraint = SubType SimpleType SimpleType deriving (Eq, Show)
 type Error = String
 
 -- During constraint generation we need:

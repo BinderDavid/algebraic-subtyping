@@ -31,7 +31,7 @@ data SimpleType
   | TyPrim Primitive
   | TyFun SimpleType SimpleType
   | TyRcd [(Label, SimpleType)]
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Show)
 
 data VariableState = MkVariableState
   { lowerBounds :: [SimpleType]
