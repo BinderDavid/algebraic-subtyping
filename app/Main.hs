@@ -28,12 +28,12 @@ inferIO tm = do
       putStrLn ""
       -- Constraint solving
       putStrLn "Solving constraints..."
-      let solverStates = stepUntilFinished constraints uvars
+      let (solverStates, res) = solveConstraints constraints
       let ppSolverStates = unlines (printCSS <$> solverStates)
       putStrLn ppSolverStates
       -- Type coalescing part1
       putStrLn "Coalescing types..."
-      let resultMap = coalesceMap (css_partialResult (last solverStates))
+      let resultMap = coalesceMap res
       putStrLn (printCoalesceMap resultMap)
       -- Zonking
       putStrLn "Zonking..."
