@@ -6,7 +6,7 @@ import Control.Monad.IO.Class (liftIO)
 
 import Parser (parseTerm)
 import Pretty
-import Inference
+import SolveConstraints
 import Syntax
 import Coalesce
 import GenerateConstraints

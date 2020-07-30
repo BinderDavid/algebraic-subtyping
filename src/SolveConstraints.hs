@@ -1,7 +1,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE NamedFieldPuns #-}
-module Inference where
+module SolveConstraints where
 
 import Data.Map (Map)
 import qualified Data.Map as M

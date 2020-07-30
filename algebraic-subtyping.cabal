@@ -30,7 +30,7 @@ library
   import: shared-build-depends
   exposed-modules:
       Syntax
-    , Inference
+    , SolveConstraints
     , Pretty
     , Coalesce
     , Parser

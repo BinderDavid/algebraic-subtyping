@@ -5,7 +5,7 @@ import Data.List (intersperse)
 import qualified Data.Map as M
 
 import Syntax
-import Inference
+import SolveConstraints
 import GenerateConstraints
 
 ------------------------------------------------------------------------------------------
