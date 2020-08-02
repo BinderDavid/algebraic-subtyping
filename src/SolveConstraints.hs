@@ -45,15 +45,20 @@ addLowerBound :: UVar -> SimpleType -> SolveM ()
 addLowerBound uv ty = modify alb
   where
     alb css@ConstraintSolverState { css_partialResult } = css { css_partialResult = alb' css_partialResult }
-    alb' m = undefined
+    alb' m = M.adjust (\(MkVariableState lbs ubs) -> MkVariableState (ty:lbs) ubs) uv m
 
 -- | Add an upper bound ty to the unification variable uv.
 addUpperBound :: UVar -> SimpleType -> SolveM ()
-addUpperBound uv ty = undefined
+addUpperBound uv ty = modify aub
+  where
+    aub css@ConstraintSolverState { css_partialResult } = css { css_partialResult = aub' css_partialResult }
+    aub' m = M.adjust (\(MkVariableState lbs ubs) -> MkVariableState lbs (ty:ubs)) uv m
 
 -- | Add the constraint c to the cache.
 addConstraintToCache :: Constraint -> SolveM ()
-addConstraintToCache c = undefined
+addConstraintToCache c = modify addc
+  where
+    addc css@ConstraintSolverState { css_cache } = css { css_cache = c:css_cache }
 
 -- | Check whether the constraint c is in the cache.
 checkCache :: Constraint -> SolveM Bool
@@ -74,7 +79,7 @@ popConstraint = do
   case css_constraints of
     [] -> return Nothing
     (c:cs) -> do
-      -- TODO: Remove c from constraint stack.
+      modify (\css -> css { css_constraints = cs })
       return (Just c)
 
 snapshot :: SolveM ()
