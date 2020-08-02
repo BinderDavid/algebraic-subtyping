@@ -48,7 +48,7 @@ coalesce mp cache Pos (TyVar uv) =
     False ->
       let
         newCache = S.insert (Pos, uv) cache
-        lbs = lowerBounds (mp M.! uv)
+        lbs = lowerBounds (M.findWithDefault (MkVariableState [] []) uv mp)
         ttlbs = coalesce mp newCache Pos <$> lbs
         ttunion = union (TTyVar (uvarToTVar uv) : ttlbs)
       in
@@ -59,7 +59,7 @@ coalesce mp cache Neg (TyVar uv) =
     False ->
       let
         newCache = S.insert (Neg, uv) cache
-        lbs = upperBounds (mp M.! uv)
+        lbs = upperBounds (M.findWithDefault (MkVariableState [] []) uv mp)
         ttlbs = coalesce mp newCache Neg <$> lbs
         ttunion = inter (TTyVar (uvarToTVar uv) : ttlbs)
       in

@@ -28,21 +28,23 @@ inferIO tm = do
       putStrLn ""
       -- Constraint solving
       putStrLn "Solving constraints..."
-      let (solverStates, res) = solveConstraints constraints
-      let ppSolverStates = unlines (printCSS <$> solverStates)
-      putStrLn ppSolverStates
-      -- Type coalescing part1
-      putStrLn "Coalescing types..."
-      let resultMap = coalesceMap res
-      putStrLn (printCoalesceMap resultMap)
-      -- Zonking
-      putStrLn "Zonking..."
-      let inferredType = zonk resultMap Pos typ
-      putStrLn (printTargetType inferredType)
-      -- Generalizing
-      putStrLn "Generalizing"
-      let generalizedType = generalize inferredType
-      putStrLn (printTypeScheme generalizedType)
+      case solveConstraints constraints of
+        Left err -> putStrLn err
+        Right (solverStates, res) -> do
+          let ppSolverStates = unlines (printCSS <$> solverStates)
+          putStrLn ppSolverStates
+          -- Type coalescing part1
+          putStrLn "Coalescing types..."
+          let resultMap = coalesceMap res
+          putStrLn (printCoalesceMap resultMap)
+          -- Zonking
+          putStrLn "Zonking..."
+          let inferredType = zonk resultMap Pos typ
+          putStrLn (printTargetType inferredType)
+          -- Generalizing
+          putStrLn "Generalizing"
+          let generalizedType = generalize inferredType
+          putStrLn (printTypeScheme generalizedType)
 
 cmd :: String -> Repl ()
 cmd s = do
